@@ -27,6 +27,7 @@ services:
     restart: unless-stopped
     volumes:
       - certbot-etc:/etc/letsencrypt
+      - certbot-var:/var/lib/letsencrypt
       - certbot-www:/var/www/certbot
     networks:
       - shared-network
@@ -106,6 +107,7 @@ volumes:
   pgadmin-data:
   registry-data:
   certbot-etc:
+  certbot-var:
   certbot-www:
 
 networks:
