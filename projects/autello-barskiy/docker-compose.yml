@@ -1,6 +1,13 @@
+# Локальная разработка: db + backend + web, всё в одном compose.
+# На прод уходит docker-compose.prod.yml (без своего db, через shared-network infra-стека).
+#
+# `image + build` вместе: `docker compose build` собирает и тегирует образ
+# именем registry.otiva.ru/*, его сразу можно пушить без дополнительного tag-команд.
+
 name: autello
 
 services:
+  # Локальный Postgres для разработки. На проде используем общий infra-postgres.
   db:
     image: postgres:16-alpine
     container_name: autello-db
@@ -9,10 +16,13 @@ services:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_DB: ${POSTGRES_DB}
+    # Пробрасываем на 5433, чтобы не конфликтовать с нативным Postgres на Windows (5432).
     ports:
       - "5433:5432"
     volumes:
       - autello-db-data:/var/lib/postgresql/data
+    # Backend ждёт здоровой БД (см. depends_on ниже) — без healthcheck может стартовать раньше,
+    # чем Postgres готов принимать соединения.
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
       interval: 5s
@@ -39,6 +49,8 @@ services:
     build: ./frontend
     container_name: autello-web
     restart: unless-stopped
+    # На проде web не торчит наружу — там его проксирует infra-nginx по HTTPS.
+    # Локально пробрасываем на 8080 для тестов через http://localhost:8080.
     ports:
       - "8080:80"
     depends_on:

@@ -1,3 +1,13 @@
+# Прод-версия для сервера otiva.ru.
+# Только image:, без build: — сборка делается локально у разработчика и пушится в Registry.
+# Запуск: docker compose -f docker-compose.prod.yml up -d
+#
+# Отличия от локального compose:
+#   - Нет сервиса db — используется общий infra-postgres через shared-network
+#   - Нет portов — backend и web проксируются снаружи через infra-nginx (HTTPS)
+#   - shared-network (external) — контейнеры подцепляются к уже существующей сети infra
+#   - watchtower-метка — Watchtower сам подхватывает новые версии при push в Registry
+
 name: autello
 
 services:
@@ -5,6 +15,7 @@ services:
     image: registry.otiva.ru/autello-backend:latest
     container_name: autello-backend
     restart: unless-stopped
+    # always — при up/pull всегда тянет свежий образ, не доверяет локальному кешу
     pull_policy: always
     environment:
       POSTGRES_HOST: ${POSTGRES_HOST}
@@ -15,6 +26,7 @@ services:
     networks:
       - shared-network
     labels:
+      # Метка говорит Watchtower "следи за этим контейнером и обновляй при push новой версии в Registry"
       - "com.centurylinklabs.watchtower.enable=true"
 
   web:
@@ -30,6 +42,7 @@ services:
       - "com.centurylinklabs.watchtower.enable=true"
 
 networks:
+  # external: true — сеть уже создана стеком infra; мы только подключаемся, не создаём.
   shared-network:
     name: shared-network
     external: true

@@ -1,3 +1,8 @@
+"""Каталог услуг компании — настройки админа.
+
+Фронт при загрузке страницы дёргает GET /admin-settings и динамически
+строит выпадашку услуг и подставляет диапазоны бюджета.
+"""
 from datetime import datetime
 
 from pydantic import BaseModel, ConfigDict
@@ -9,8 +14,9 @@ from core.database import Base
 
 class AdminSetting(Base):
     """
-    Настройки услуг, которые заполняет админ. Фронт читает эту таблицу
-    и динамически строит выпадашку услуг и ползунок бюджета.
+    Одна запись = одна услуга. Решение "запись на услугу" (а не JSON-массив в
+    одной строке) даёт чистый CRUD: добавить/удалить/редактировать услугу —
+    обычная операция над строкой таблицы.
 
     CREATE TABLE admin_settings (
         id           SERIAL PRIMARY KEY,
@@ -31,11 +37,13 @@ class AdminSetting(Base):
 
 
 class AdminSettingCreate(BaseModel):
+    """Входные данные для POST /admin-settings."""
     services: str
     budget_range: str
 
 
 class AdminSettingOut(AdminSettingCreate):
+    """Ответ API с id и метаданными."""
     model_config = ConfigDict(from_attributes=True)
 
     id: int
@@ -44,6 +52,7 @@ class AdminSettingOut(AdminSettingCreate):
 
 
 def create_admin_setting(db: Session, data: AdminSettingCreate) -> AdminSetting:
+    """Добавить услугу в каталог."""
     item = AdminSetting(**data.model_dump())
     db.add(item)
     db.commit()
@@ -52,14 +61,17 @@ def create_admin_setting(db: Session, data: AdminSettingCreate) -> AdminSetting:
 
 
 def get_admin_settings(db: Session) -> list[AdminSetting]:
+    """Весь каталог по возрастанию id — в таком же порядке услуги рисуются в выпадашке."""
     return db.query(AdminSetting).order_by(AdminSetting.id.asc()).all()
 
 
 def get_admin_setting(db: Session, item_id: int) -> AdminSetting | None:
+    """Одна услуга по id или None."""
     return db.query(AdminSetting).filter(AdminSetting.id == item_id).first()
 
 
 def delete_admin_setting(db: Session, item_id: int) -> bool:
+    """Удалить услугу. True — удалена, False — не найдена."""
     item = get_admin_setting(db, item_id)
     if item is None:
         return False

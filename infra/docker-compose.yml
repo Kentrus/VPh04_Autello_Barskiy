@@ -1,6 +1,13 @@
+# Инфра-стек платформы (общая для всех проектов на VPS).
+# Разворачивается в /root/infra на сервере. Не трогает код проектов.
+# Проекты (autello-barskiy и будущие) подключаются к shared-network и видят
+# инфра-сервисы по именам: infra-postgres, infra-registry и т.д.
+
 name: infra
 
 services:
+  # Входная дверь. Слушает 80/443, разруливает по Host на нужные сервисы/проекты.
+  # Конкретные vhost'ы лежат в nginx/conf.d/*.conf и монтируются read-only.
   nginx:
     image: nginx:1.27-alpine
     container_name: infra-nginx
@@ -11,6 +18,8 @@ services:
     volumes:
       - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
       - ./nginx/conf.d:/etc/nginx/conf.d:ro
+      # Общие с certbot volume'ы: сертификаты и challenge-файлы.
+      # :ro — nginx только читает, а certbot пишет.
       - certbot-etc:/etc/letsencrypt:ro
       - certbot-www:/var/www/certbot:ro
     networks:
@@ -21,18 +30,25 @@ services:
     labels:
       - "com.centurylinklabs.watchtower.enable=true"
 
+  # Автопродление Let's Encrypt сертификатов. Цикл каждые 12ч; если до истечения
+  # осталось меньше 30 дней — certbot обновляет, иначе no-op (идемпотентно).
   certbot:
     image: certbot/certbot:latest
     container_name: infra-certbot
     restart: unless-stopped
     volumes:
       - certbot-etc:/etc/letsencrypt
+      # /var/lib/letsencrypt в образе объявлен VOLUME — без явного маппинга
+      # Docker создавал бы анонимный volume на каждый старт (накапливаются сироты).
       - certbot-var:/var/lib/letsencrypt
       - certbot-www:/var/www/certbot
     networks:
       - shared-network
+    # Цикл: попытка renew → 12ч сон. trap exit TERM — корректная остановка по SIGTERM.
     entrypoint: /bin/sh -c 'trap exit TERM; while :; do certbot renew --webroot -w /var/www/certbot --quiet; sleep 12h & wait $${!}; done'
 
+  # Общий PostgreSQL для всех проектов. Проекты создают свои БД и юзеров внутри него
+  # (для autello: база autello_db, пользователь autello с правами только на неё).
   postgres:
     image: postgres:16-alpine
     container_name: infra-postgres
@@ -46,12 +62,15 @@ services:
       - ./postgres/init:/docker-entrypoint-initdb.d:ro
     networks:
       - shared-network
+    # Проекты ждут healthy-статус БД перед стартом — иначе backend падает,
+    # пытаясь подключиться к ещё не готовому Postgres.
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
       interval: 10s
       timeout: 5s
       retries: 5
 
+  # Веб-админка БД. Порт 5050 пока публичный — в планах спрятать за поддомен + HTTPS.
   pgadmin:
     image: dpage/pgadmin4:latest
     container_name: infra-pgadmin
@@ -71,6 +90,7 @@ services:
       postgres:
         condition: service_healthy
 
+  # Приватный Docker Registry. Образы проектов пушатся сюда, Watchtower пуллит оттуда.
   registry:
     image: registry:2
     container_name: infra-registry
@@ -79,25 +99,34 @@ services:
       REGISTRY_AUTH: htpasswd
       REGISTRY_AUTH_HTPASSWD_REALM: "Private Docker Registry"
       REGISTRY_AUTH_HTPASSWD_PATH: /auth/htpasswd
+      # Разрешает удаление слоёв при очистке — нужно, если реестр будем чистить скриптом.
       REGISTRY_STORAGE_DELETE_ENABLED: "true"
-    # Наружу НЕ публикуем — доступ только через registry.otiva.ru (HTTPS) за infra-nginx
+    # Наружу НЕ публикуем. Доступ только через registry.otiva.ru (HTTPS) за infra-nginx.
     volumes:
       - registry-data:/var/lib/registry
       - ./registry/auth:/auth:ro
     networks:
       - shared-network
 
+  # Автообновление контейнеров при появлении новой версии образа в Registry.
   watchtower:
+    # Форк nickfedor — containrrr/watchtower перестал обновляться в 2024.
     image: nickfedor/watchtower:latest
     container_name: infra-watchtower
     restart: unless-stopped
     environment:
+      # Опрашивает Registry раз в 60 секунд.
       WATCHTOWER_POLL_INTERVAL: 60
+      # Удаляет старые образы после обновления — диск не захламляется.
       WATCHTOWER_CLEANUP: "true"
       WATCHTOWER_INCLUDE_RESTARTING: "true"
+      # Обновляет ТОЛЬКО контейнеры с label com.centurylinklabs.watchtower.enable=true.
+      # Без этого при бездумной раскладке обновлений сам бы пересобрал Postgres — потеряли бы данные.
       WATCHTOWER_LABEL_ENABLE: "true"
     volumes:
+      # docker.sock — чтобы ворочать контейнерами хоста.
       - /var/run/docker.sock:/var/run/docker.sock
+      # Логин/пароль для приватного Registry (записан туда через docker login на сервере).
       - /root/.docker/config.json:/config.json:ro
     networks:
       - shared-network
@@ -111,6 +140,7 @@ volumes:
   certbot-www:
 
 networks:
+  # Общая сеть платформы. Projects-compose ссылается на неё как external.
   shared-network:
     name: shared-network
     driver: bridge
