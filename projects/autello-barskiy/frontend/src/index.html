@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Autéllo Barskiy — Премиум-детейлинг элитных авто</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@300;400;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+  <div class="bg-particles" aria-hidden="true">
+    <span></span><span></span><span></span><span></span><span></span>
+    <span></span><span></span><span></span><span></span><span></span>
+  </div>
+
+  <header class="hero">
+    <div class="hero__brand">Autéllo Barskiy</div>
+    <h1 class="hero__title">Премиум-детейлинг элитных автомобилей</h1>
+    <p class="hero__subtitle">
+      Итальянские технологии. Мастера с 15-летним опытом.
+      Реставрация коллекционных авто, керамика, бронирование, аудиосистемы Burmester.
+    </p>
+  </header>
+
+  <main class="container">
+    <section class="card">
+      <h2 class="card__title">Заявка на услугу</h2>
+      <p class="card__hint">Заполните форму — мы свяжемся с вами и подготовим персональное предложение.</p>
+
+      <form id="application-form" class="form" novalidate>
+        <div class="form__row">
+          <label class="form__field">
+            <span>Фамилия *</span>
+            <input name="last_name" type="text" required>
+          </label>
+          <label class="form__field">
+            <span>Имя *</span>
+            <input name="first_name" type="text" required>
+          </label>
+          <label class="form__field">
+            <span>Отчество</span>
+            <input name="middle_name" type="text">
+          </label>
+        </div>
+
+        <label class="form__field">
+          <span>Интересующая услуга *</span>
+          <select name="service" id="service-select" required>
+            <option value="" disabled selected>Загружаем список услуг…</option>
+          </select>
+        </label>
+
+        <label class="form__field">
+          <span>Бюджет *</span>
+          <input name="budget" id="budget-input" type="text" placeholder="Выберите услугу — бюджет подставится" required>
+        </label>
+
+        <div class="form__row">
+          <label class="form__field">
+            <span>Ниша бизнеса</span>
+            <input name="business_niche" type="text" placeholder="Автосалон / Частный коллекционер / …">
+          </label>
+          <label class="form__field">
+            <span>Размер компании</span>
+            <input name="company_size" type="text" placeholder="Например, 10–50 сотрудников">
+          </label>
+        </div>
+
+        <div class="form__row">
+          <label class="form__field">
+            <span>Кто вы</span>
+            <select name="role">
+              <option value="">—</option>
+              <option>Руководитель</option>
+              <option>Сотрудник</option>
+              <option>Частное лицо</option>
+            </select>
+          </label>
+          <label class="form__field">
+            <span>Объём задачи</span>
+            <input name="task_scope" type="text" placeholder="1 авто / парк из 5 машин / …">
+          </label>
+          <label class="form__field">
+            <span>Срок</span>
+            <input name="deadline" type="text" placeholder="Например, 2 недели">
+          </label>
+        </div>
+
+        <div class="form__row">
+          <label class="form__field">
+            <span>Удобный способ связи</span>
+            <select name="preferred_contact">
+              <option value="">—</option>
+              <option>Телефон</option>
+              <option>WhatsApp</option>
+              <option>Telegram</option>
+              <option>Email</option>
+            </select>
+          </label>
+          <label class="form__field">
+            <span>Удобное время</span>
+            <input name="contact_time" type="text" placeholder="Будни после 18:00">
+          </label>
+        </div>
+
+        <label class="form__field">
+          <span>Комментарий</span>
+          <textarea name="comment" rows="3" placeholder="Модель авто, особые пожелания, состояние ЛКП…"></textarea>
+        </label>
+
+        <button type="submit" class="btn" id="submit-btn">Отправить заявку</button>
+
+        <div id="form-status" class="form__status" role="status" aria-live="polite"></div>
+      </form>
+    </section>
+  </main>
+
+  <footer class="footer">
+    © Autéllo Barskiy. Все авто обрабатываются в закрытом боксе. Никаких посторонних.
+  </footer>
+</body>
+</html>
