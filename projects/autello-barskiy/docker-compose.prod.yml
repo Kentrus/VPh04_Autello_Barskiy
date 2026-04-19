@@ -2,7 +2,7 @@ name: autello
 
 services:
   backend:
-    image: otiva.ru:5000/autello-backend:latest
+    image: registry.otiva.ru/autello-backend:latest
     container_name: autello-backend
     restart: unless-stopped
     pull_policy: always
@@ -18,7 +18,7 @@ services:
       - "com.centurylinklabs.watchtower.enable=true"
 
   web:
-    image: otiva.ru:5000/autello-web:latest
+    image: registry.otiva.ru/autello-web:latest
     container_name: autello-web
     restart: unless-stopped
     pull_policy: always

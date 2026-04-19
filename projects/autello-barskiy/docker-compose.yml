@@ -20,7 +20,7 @@ services:
       retries: 10
 
   backend:
-    image: otiva.ru:5000/autello-backend:latest
+    image: registry.otiva.ru/autello-backend:latest
     build: ./backend
     container_name: autello-backend
     restart: unless-stopped
@@ -35,7 +35,7 @@ services:
         condition: service_healthy
 
   web:
-    image: otiva.ru:5000/autello-web:latest
+    image: registry.otiva.ru/autello-web:latest
     build: ./frontend
     container_name: autello-web
     restart: unless-stopped
