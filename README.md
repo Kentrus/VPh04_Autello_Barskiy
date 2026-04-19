@@ -109,9 +109,10 @@ docker ps
 
 ### Известные ограничения Part 1
 
-- Нет HTTPS — только HTTP (Let's Encrypt — в планах)
-- pgAdmin и Registry доступны по IP:порт без доменов
+- HTTPS настроен для поддоменов `autello.otiva.ru` и `registry.otiva.ru` (Let's Encrypt через certbot с автопродлением каждые 12ч через webroot). Для самого `otiva.ru` — пока HTTP-заглушка
+- pgAdmin пока доступен по IP:5050, Registry — через HTTPS на `registry.otiva.ru`
 - Watchtower обновляет только помеченные контейнеры (чтобы не перезапускать БД)
+- Watchtower авторизован в приватном Registry через монтирование `/root/.docker/config.json`
 - Нет автобэкапов Postgres
 
 ---
@@ -145,9 +146,15 @@ docker exec autello-backend python seed_services.py
 - http://localhost:8080 — сайт
 - http://localhost:8080/docs — Swagger
 
-### Деплой на otiva.ru
+### Деплой на otiva.ru — DONE
 
-В планах: маршрут `autello.otiva.ru` через `infra/nginx/conf.d/autello.conf` + подключение контейнеров проекта к `shared-network`.
+Сайт живёт на **https://autello.otiva.ru/**. Схема деплоя:
+
+1. Локально: `docker compose build && docker compose push` → образы летят в `https://registry.otiva.ru`
+2. На сервере при первом деплое: `docker compose -f docker-compose.prod.yml pull && up -d`
+3. При последующих обновлениях: Watchtower сам подхватывает новую версию из Registry и рестартует контейнеры (интервал 60 сек, только контейнеры с меткой `com.centurylinklabs.watchtower.enable=true`)
+
+На сервере backend не торчит наружу — доступен только внутри `shared-network`, публикуется через `infra-nginx` с SSL-терминацией.
 
 ### Известные ограничения Part 2
 
@@ -161,8 +168,9 @@ docker exec autello-backend python seed_services.py
 
 ## Планы развития
 
-- **VPh06:** админка, поведенческая аналитика, деплой на `autello.otiva.ru`
-- **Безопасность:** HTTPS через Let's Encrypt, UFW-firewall, fail2ban
+- **VPh06:** админка на `/admin`, поведенческая аналитика
+- **Безопасность:** UFW-firewall, fail2ban для брутфорса SSH и Registry
+- **HTTPS на главном `otiva.ru`** (сейчас HTTP-заглушка)
 - **Эксплуатация:** cron-бэкапы Postgres, мониторинг (uptime, healthcheck-агрегация)
 - **Расширение платформы:** второй проект в `projects/chatbot/`
 
