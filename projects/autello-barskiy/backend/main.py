@@ -9,7 +9,7 @@ Base.metadata.create_all(bind=engine)
 app = FastAPI(
     title="Autéllo Barskiy API",
     description="Backend для сайта обработки заявок премиум-автосервиса",
-    version="0.1.0",
+    version="0.1.1",
     redirect_slashes=False,
 )
 
