@@ -28,6 +28,8 @@ services:
     volumes:
       - certbot-etc:/etc/letsencrypt
       - certbot-www:/var/www/certbot
+    networks:
+      - shared-network
     entrypoint: /bin/sh -c 'trap exit TERM; while :; do certbot renew --webroot -w /var/www/certbot --quiet; sleep 12h & wait $${!}; done'
 
   postgres:
@@ -77,8 +79,7 @@ services:
       REGISTRY_AUTH_HTPASSWD_REALM: "Private Docker Registry"
       REGISTRY_AUTH_HTPASSWD_PATH: /auth/htpasswd
       REGISTRY_STORAGE_DELETE_ENABLED: "true"
-    ports:
-      - "5000:5000"
+    # Наружу НЕ публикуем — доступ только через registry.otiva.ru (HTTPS) за infra-nginx
     volumes:
       - registry-data:/var/lib/registry
       - ./registry/auth:/auth:ro
