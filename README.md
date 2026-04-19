@@ -75,23 +75,48 @@ VPh04_Autello_Barskiy_Part1/
 
 #### Шаги
 
-```bash
-# 1. Клонировать репо
-git clone https://github.com/Kentrus/VPh04_Autello_Barskiy.git
-cd VPh04_Autello_Barskiy/infra
+На сервере должно получиться:
 
-# 2. Заполнить .env
+```
+/root/
+├── infra/                      ← платформа
+└── projects/
+    └── autello-barskiy/        ← проект (VPh05+)
+```
+
+```bash
+# 1. Клонировать репо во временную папку
+git clone https://github.com/Kentrus/VPh04_Autello_Barskiy.git /tmp/repo
+
+# 2. Перенести infra и project на свои места
+mv /tmp/repo/infra /root/infra
+mkdir -p /root/projects
+mv /tmp/repo/projects/autello-barskiy /root/projects/autello-barskiy
+rm -rf /tmp/repo
+
+# 3. Заполнить .env для infra
+cd /root/infra
 cp .env.example .env
 nano .env
 
-# 3. Создать учётку для Registry
+# 4. Создать учётку для Registry
 chmod +x registry/create-user.sh
 ./registry/create-user.sh admin <strong-password>
 
-# 4. Запустить
+# 5. Запустить инфру
 docker compose up -d
 docker ps
+
+# 6. Запустить проект (после инфры)
+cd /root/projects/autello-barskiy
+cp .env.example .env  # заполнить реальными паролями от autello_db
+docker compose -f docker-compose.prod.yml up -d
 ```
+
+#### Как обновлять после правок в репо
+
+- **Код приложения (backend/frontend):** локально `docker compose build && push` → Watchtower сам подтянет в течение минуты.
+- **Инфра (nginx conf, compose):** клонирование через `/tmp`, ручной `cp` нужных файлов в `/root/infra/`, `docker exec infra-nginx nginx -s reload` или `docker compose up -d` в `/root/infra/`.
 
 #### Проверки
 
