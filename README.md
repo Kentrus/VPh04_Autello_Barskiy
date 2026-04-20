@@ -1,9 +1,10 @@
 # Autéllo Barskiy — платформа и проект
 
-Модуль 8 курса «Профессия вайб-кодер» (Zerocoder). Кейс «Сайт для обработки заказов от покупателей» — в двух частях:
+Модуль 8 курса «Профессия вайб-кодер» (Zerocoder). Кейс «Сайт для обработки заказов от покупателей» — в трёх частях:
 
 - **VPh04. Часть 1:** инфраструктура — «докеризированный монолит» на VPS.
 - **VPh05. Часть 2:** приложение Autéllo Barskiy — FastAPI + webpack-фронт, подключается к общей инфре.
+- **VPh06. Часть 3:** админ-панель с JWT-авторизацией, CRUD услуг, сбор метрик + heatmap, приоритизация заявок по «температуре» лида, закрытие API/БД от внешнего мира.
 
 Репозиторий один на весь кейс, развивается от части к части.
 
@@ -35,7 +36,8 @@ VPh04_Autello_Barskiy_Part1/
 ├── .gitignore
 ├── screenshots/
 │   ├── VPh04/                   ← скриншоты Part 1 (инфра)
-│   └── VPh05/                   ← скриншоты Part 2 (приложение)
+│   ├── VPh05/                   ← скриншоты Part 2 (приложение)
+│   └── VPh06/                   ← скриншоты Part 3 (админка + lockdown)
 ├── infra/                       ← Часть 1: платформа
 │   ├── docker-compose.yml       ← nginx + postgres + pgadmin + registry + watchtower
 │   ├── .env.example
@@ -183,21 +185,74 @@ docker exec autello-backend python seed_services.py
 
 ### Известные ограничения Part 2
 
-- Нет аутентификации — `/docs` и админские эндпоинты публичны
-- Поведенческая аналитика — модель готова, но фронт её пока не шлёт
 - CORS — `allow_origins=["*"]`, не для прода
-- Нет миграций (Alembic) — таблицы через `Base.metadata.create_all()`
-- Админка на `/admin` с авторизацией — следующий урок
+- Нет миграций (Alembic) — таблицы через `Base.metadata.create_all()`; при смене схемы (VPh06 сделал это с `behavior_metrics`) нужен ручной `DROP TABLE`
 
 ---
 
-## Планы развития
+## Часть 3 — Админ-панель, метрики, lockdown (VPh06)
 
-- **VPh06:** админка на `/admin`, поведенческая аналитика
-- **Безопасность:** UFW-firewall, fail2ban для брутфорса SSH и Registry
-- **HTTPS на главном `otiva.ru`** (сейчас HTTP-заглушка)
-- **Эксплуатация:** cron-бэкапы Postgres, мониторинг (uptime, healthcheck-агрегация)
-- **Расширение платформы:** второй проект в `projects/chatbot/`
+Продолжает часть 2 в том же `projects/autello-barskiy/`.
+
+### Что добавлено
+
+- **JWT-авторизация** (`bcrypt` + `pyjwt`): эндпоинты `/api/auth/check|register|login|me`.
+  - OAuth2 Password Flow — логин принимает form-urlencoded, кнопка Authorize в Swagger работает из коробки.
+  - Первая регистрация открыта, пока админов ноль. После создания первого — endpoint возвращает 403.
+  - `SECRET_KEY` в `.env` (локально и на сервере — разные); `servers=[{"url": "/api"}]` в FastAPI чтобы Swagger Try-it-out работал за nginx-proxy.
+
+- **Админ-страница `/admin`** — второй webpack entry: `src/admin.js` + `admin.html` + `admin.css`.
+  - JWT в `localStorage`, централизованный `apiFetch` с авто-редиректом на логин при 401.
+  - nginx route `location = /admin` → `admin.html`.
+
+- **CRUD услуг таблицей** с inline-редактированием. `POST/PUT/DELETE /admin-settings` защищены через `Depends(get_current_admin)`, GET публичный для клиентской формы.
+
+- **Поведенческие метрики.**
+  - Схема БД пересобрана: FK на `applications` убран, поля переименованы в `buttons_clicked`, `cursor_positions`, `return_frequency` согласно ТЗ. Метрика анонимная.
+  - Клиент `src/behavior-metrics.js` шлёт POST раз в секунду: кумулятивное время + дельта кликов + координата мыши (последняя известная).
+  - Бэкенд принимает `application_id` во входе и **игнорирует** — ни валидации FK, ни сохранения.
+
+- **Статистика + heatmap** в модалке админки: среднее время сессии за день/неделю/месяц + SVG-heatmap 1920×1080 с полупрозрачными кружками (наложение = горячие зоны).
+
+- **Приоритизация заявок.** Rule-based скоринг на фронте (budget, deadline, company_size, role, business_niche, task_scope). Сортировка от горячих к холодным, цветные бейджи, модалка «Просмотр» со списком причин балла и рекомендацией (персональный менеджер / обычный / автоответ). GET `/api/applications` защищён (PII). `backend/seed_applications.sql` — 10 тестовых (4/3/3).
+
+- **Lockdown.**
+  - Swagger убран из nginx (`/docs`, `/openapi.json` — fallback на главную).
+  - Локально `docker-compose.yml`: 5433 у Postgres закомментирован.
+  - Infra: у `pgadmin` убран `ports: "5050:80"` — теперь только внутри `shared-network`. Registry уже был без публичных портов.
+  - На проде снаружи слушают только `:22 :80 :443` (+ системный zabbix `:10050`). Прямой доступ к `:8000` и `:5432` — CLOSED.
+
+### Деплой VPh06 на прод (что отличается от обычного)
+
+Обычный Watchtower-цикл (`build → push → жди 60с`) **не применим**, потому что изменились:
+1. Env-переменные (`SECRET_KEY` новый) → нужен `--force-recreate`
+2. Compose-файл (`SECRET_KEY: ${SECRET_KEY}` в `environment:`) → файл на сервере надо обновить
+3. Схема `behavior_metrics` сломана (FK убран, поля переименованы) → ручной `DROP TABLE`
+
+Процедура:
+
+```bash
+# локально
+docker compose build
+docker push registry.otiva.ru/autello-backend:latest
+docker push registry.otiva.ru/autello-web:latest
+
+# на сервере
+ssh root@otiva.ru
+echo "SECRET_KEY=$(openssl rand -hex 32)" >> /root/projects/autello-barskiy/.env
+docker exec infra-postgres psql -U autello -d autello_db -c "DROP TABLE IF EXISTS behavior_metrics CASCADE;"
+
+# обновить docker-compose.prod.yml на сервере (через /tmp clone)
+git clone --depth=1 https://github.com/Kentrus/VPh04_Autello_Barskiy.git /tmp/clone
+cp /tmp/clone/projects/autello-barskiy/docker-compose.prod.yml /root/projects/autello-barskiy/
+cp /tmp/clone/infra/docker-compose.yml /root/infra/  # если менялась инфра (lockdown pgadmin)
+rm -rf /tmp/clone
+
+cd /root/projects/autello-barskiy && docker compose -f docker-compose.prod.yml up -d --force-recreate
+cd /root/infra && docker compose up -d --force-recreate pgadmin  # применить lockdown pgadmin
+```
+
+После этого зайти на **https://autello.otiva.ru/admin** и зарегистрировать первого админа.
 
 ## Ссылки
 
