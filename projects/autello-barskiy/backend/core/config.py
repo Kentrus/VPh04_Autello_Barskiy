@@ -14,6 +14,15 @@ class Settings(BaseSettings):
     POSTGRES_PASSWORD: str
     POSTGRES_DB: str
 
+    # JWT-настройки. SECRET_KEY обязателен — сгенерировать локально: openssl rand -hex 32.
+    # Если ключ утечёт, злоумышленник сможет подписывать токены от имени админа,
+    # поэтому он никогда не коммитится в репо — живёт в .env.
+    SECRET_KEY: str
+    JWT_ALGORITHM: str = "HS256"
+    # Срок жизни токена в минутах. 24 часа — разумный компромисс для админки:
+    # не слишком часто перелогиниваться, но не вечно висеть в браузере после закрытия.
+    JWT_TTL_MINUTES: int = 60 * 24
+
     @property
     def database_url(self) -> str:
         """Строка подключения в формате SQLAlchemy: диалект+драйвер://user:pass@host:port/db."""

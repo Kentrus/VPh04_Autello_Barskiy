@@ -1,21 +1,27 @@
 // Webpack-конфиг для фронта.
-// Собирает src/* → dist/ (bundle.[hash].js, styles.[hash].css, index.html).
-// Хэши в именах даёт кэш-бустинг: обновили код → новый хэш → браузер скачивает заново.
+//
+// Две точки входа (multi-entry):
+//   index  — публичный сайт (src/index.js + src/index.html)
+//   admin  — админ-панель   (src/admin.js + src/admin.html)
+// Каждая собирает свой bundle и подключает только свой CSS (через chunks в HtmlWebpackPlugin).
+// Хэши в именах дают кэш-бустинг: обновили код → новый хэш → браузер скачивает заново.
 
 const path = require('path');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
 const MiniCssExtractPlugin = require('mini-css-extract-plugin');
 
 module.exports = {
-  entry: './src/index.js',
+  entry: {
+    index: './src/index.js',
+    admin: './src/admin.js',
+  },
   output: {
     path: path.resolve(__dirname, 'dist'),
-    filename: 'bundle.[contenthash].js',
-    // publicPath '/' — браузер запрашивает /bundle.xxx.js, /styles.xxx.css.
-    // Без этого возможны проблемы с относительными путями, когда ассеты
-    // ищутся относительно текущего location (а не корня сайта).
+    // [name] = ключ из entry (index / admin). contenthash — под бустер кэша.
+    filename: '[name].[contenthash].js',
+    // publicPath '/' — браузер запрашивает /index.xxx.js и т.д. от корня сайта.
     publicPath: '/',
-    // clean: true чистит dist/ перед сборкой, чтоб не копились старые bundle-ы с разными хэшами.
+    // clean: true чистит dist/ перед сборкой — не копятся старые bundle-ы с разными хэшами.
     clean: true,
   },
   module: {
@@ -23,19 +29,25 @@ module.exports = {
       {
         test: /\.css$/,
         // MiniCssExtractPlugin.loader вытаскивает CSS в отдельный файл (вместо инлайна в JS через style-loader).
-        // Нужно для прод-раздачи: браузер грузит CSS параллельно с JS, стили применяются быстрее.
         use: [MiniCssExtractPlugin.loader, 'css-loader'],
       },
     ],
   },
   plugins: [
-    // Берёт наш src/index.html как шаблон и вставляет в него <script>/<link> с правильными хэш-именами.
+    // chunks: ['index'] — в index.html войдёт только JS/CSS точки index, не admin.
     new HtmlWebpackPlugin({
       template: './src/index.html',
       filename: 'index.html',
+      chunks: ['index'],
+    }),
+    new HtmlWebpackPlugin({
+      template: './src/admin.html',
+      filename: 'admin.html',
+      chunks: ['admin'],
     }),
     new MiniCssExtractPlugin({
-      filename: 'styles.[contenthash].css',
+      // [name] = имя entry → index.[hash].css и admin.[hash].css отдельно.
+      filename: '[name].[contenthash].css',
     }),
   ],
   // Dev-сервер для локальной разработки (npm run dev). В проде не используется.

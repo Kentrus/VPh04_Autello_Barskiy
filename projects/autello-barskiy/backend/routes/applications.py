@@ -11,6 +11,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from core.database import get_db
+from models.admin import Admin
 from models.application import (
     ApplicationCreate,
     ApplicationOut,
@@ -18,25 +19,36 @@ from models.application import (
     get_application,
     get_applications,
 )
+from routes.auth import get_current_admin
 
 router = APIRouter(prefix="/applications", tags=["applications"])
 
 
 @router.post("", response_model=ApplicationOut, status_code=201)
 def create(data: ApplicationCreate, db: Session = Depends(get_db)):
-    """Создать заявку. Возвращает 201 Created с телом заявки (включая id)."""
+    """Создать заявку. Возвращает 201 Created с телом заявки (включая id).
+    Эндпоинт публичный — любой посетитель сайта может оставить заявку."""
     return create_application(db, data)
 
 
 @router.get("", response_model=list[ApplicationOut])
-def list_all(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
-    """Список заявок с пагинацией."""
+def list_all(
+    skip: int = 0,
+    limit: int = 100,
+    db: Session = Depends(get_db),
+    _: Admin = Depends(get_current_admin),
+):
+    """Список заявок с пагинацией. Защищено — содержит PII (имена, контакты)."""
     return get_applications(db, skip=skip, limit=limit)
 
 
 @router.get("/{app_id}", response_model=ApplicationOut)
-def retrieve(app_id: int, db: Session = Depends(get_db)):
-    """Одна заявка по id; 404 если нет."""
+def retrieve(
+    app_id: int,
+    db: Session = Depends(get_db),
+    _: Admin = Depends(get_current_admin),
+):
+    """Одна заявка по id; 404 если нет. Защищено — PII."""
     app = get_application(db, app_id)
     if app is None:
         raise HTTPException(status_code=404, detail="Application not found")

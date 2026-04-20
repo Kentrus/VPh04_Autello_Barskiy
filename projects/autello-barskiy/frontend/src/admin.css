@@ -1,0 +1,539 @@
+/* Стили админ-панели. Живут отдельно от главной страницы, чтобы не пересекаться
+   со стилями клиентской формы, и грузятся только на /admin (webpack multi-entry). */
+
+:root {
+  --admin-bg: #f5f5f7;
+  --admin-surface: #ffffff;
+  --admin-text: #1d1d1f;
+  --admin-muted: #6e6e73;
+  --admin-accent: #bf9f5b;       /* золотой акцент — фирменный */
+  --admin-accent-dark: #9a8044;
+  --admin-danger: #d0342c;
+  --admin-success: #1e8e3e;
+  --admin-border: #e5e5ea;
+  --admin-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+}
+
+* { box-sizing: border-box; }
+
+html, body { height: 100%; }
+
+body.admin-body {
+  margin: 0;
+  font-family: 'Nunito', system-ui, sans-serif;
+  color: var(--admin-text);
+  background: var(--admin-bg);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* --- Шапка ---------------------------------------------------------------- */
+
+.admin-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 32px;
+  background: var(--admin-surface);
+  border-bottom: 1px solid var(--admin-border);
+  box-shadow: var(--admin-shadow);
+}
+
+.admin-header__brand {
+  font-weight: 700;
+  letter-spacing: 0.2px;
+}
+
+.admin-header__user {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  color: var(--admin-muted);
+}
+
+/* --- Основная область + переключение «карточек» --------------------------- */
+
+.admin-main {
+  padding: 32px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+/* По умолчанию view скрыты; активный выводится. Явный display: flex/block в
+   is-active даёт предсказуемую выключенность — никаких мерцаний при загрузке. */
+.admin-view { display: none; }
+.admin-view.is-active { display: block; }
+
+.admin-hint {
+  color: var(--admin-muted);
+  font-size: 14px;
+}
+
+/* --- Карточка логина/регистрации ----------------------------------------- */
+
+.auth-card {
+  max-width: 420px;
+  margin: 48px auto;
+  padding: 32px;
+  background: var(--admin-surface);
+  border: 1px solid var(--admin-border);
+  border-radius: 12px;
+  box-shadow: var(--admin-shadow);
+}
+
+.auth-card__title {
+  margin: 0 0 8px;
+  font-size: 24px;
+  font-weight: 700;
+}
+
+.auth-card__hint {
+  margin: 0 0 24px;
+  color: var(--admin-muted);
+  font-size: 14px;
+}
+
+.auth-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.form__field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 14px;
+  color: var(--admin-muted);
+}
+
+.form__field input,
+.form__field select,
+.form__field textarea {
+  padding: 10px 12px;
+  font: inherit;
+  color: var(--admin-text);
+  background: var(--admin-bg);
+  border: 1px solid var(--admin-border);
+  border-radius: 8px;
+  outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.form__field input:focus,
+.form__field select:focus,
+.form__field textarea:focus {
+  border-color: var(--admin-accent);
+  box-shadow: 0 0 0 3px rgba(191, 159, 91, 0.18);
+}
+
+.btn {
+  padding: 10px 18px;
+  font: inherit;
+  font-weight: 600;
+  color: #fff;
+  background: var(--admin-accent);
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.btn:hover { background: var(--admin-accent-dark); }
+.btn:disabled { background: #bdbdbd; cursor: not-allowed; }
+
+.btn--ghost {
+  color: var(--admin-muted);
+  background: transparent;
+  border: 1px solid var(--admin-border);
+}
+.btn--ghost:hover { background: var(--admin-bg); color: var(--admin-text); }
+
+.btn--link {
+  color: var(--admin-accent-dark);
+  background: transparent;
+  text-decoration: underline;
+  padding: 4px 0;
+}
+.btn--link:hover { color: var(--admin-accent); background: transparent; }
+
+/* --- Статус-сообщения формы ---------------------------------------------- */
+
+.form__status {
+  min-height: 20px;
+  margin-top: 8px;
+  font-size: 14px;
+  color: var(--admin-muted);
+}
+.form__status.success { color: var(--admin-success); }
+.form__status.error   { color: var(--admin-danger); }
+
+/* --- Сама панель (наполним на Шаге 3) ------------------------------------ */
+
+.admin-panel {
+  background: var(--admin-surface);
+  border: 1px solid var(--admin-border);
+  border-radius: 12px;
+  padding: 32px;
+  box-shadow: var(--admin-shadow);
+}
+
+.admin-panel__title {
+  margin: 0 0 24px;
+  font-size: 24px;
+  font-weight: 700;
+}
+
+/* --- Блок (CRUD-секция) --------------------------------------------------- */
+
+.admin-block {
+  margin-top: 24px;
+  padding-top: 24px;
+  border-top: 1px solid var(--admin-border);
+}
+.admin-block:first-of-type {
+  margin-top: 0;
+  padding-top: 0;
+  border-top: none;
+}
+
+.admin-block__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.admin-block__title {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 700;
+}
+
+/* --- Таблица CRUD -------------------------------------------------------- */
+
+.admin-table-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--admin-border);
+  border-radius: 10px;
+  background: var(--admin-surface);
+}
+
+.admin-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.admin-table th,
+.admin-table td {
+  padding: 12px 16px;
+  text-align: left;
+  border-bottom: 1px solid var(--admin-border);
+  vertical-align: middle;
+}
+
+.admin-table thead th {
+  background: var(--admin-bg);
+  color: var(--admin-muted);
+  font-weight: 600;
+  text-transform: uppercase;
+  font-size: 12px;
+  letter-spacing: 0.4px;
+}
+
+.admin-table tbody tr:last-child td { border-bottom: none; }
+
+/* Inline-поля редактирования — выглядят плоско, вписываются в ячейку. */
+.admin-table input.cell-input {
+  width: 100%;
+  padding: 6px 8px;
+  font: inherit;
+  color: var(--admin-text);
+  background: var(--admin-bg);
+  border: 1px solid var(--admin-border);
+  border-radius: 6px;
+  outline: none;
+}
+.admin-table input.cell-input:focus {
+  border-color: var(--admin-accent);
+  box-shadow: 0 0 0 2px rgba(191, 159, 91, 0.18);
+}
+
+/* Пустое состояние и сообщения загрузки рисуются как одна td на всю ширину. */
+.admin-table .cell-empty {
+  padding: 24px;
+  text-align: center;
+  color: var(--admin-muted);
+  font-style: italic;
+}
+
+/* Действия — иконки/кнопки в ряд, компактные. */
+.row-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.btn--small {
+  padding: 6px 10px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.btn--danger {
+  background: var(--admin-danger);
+}
+.btn--danger:hover { background: #a32820; }
+
+/* --- Действия верхнего уровня админки ------------------------------------ */
+
+.admin-actions {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+}
+
+/* --- Модалка ------------------------------------------------------------- */
+
+.modal[hidden] { display: none; }
+
+.modal {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+
+.modal__backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(2px);
+}
+
+.modal__dialog {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: 1100px;
+  max-height: 92vh;
+  background: var(--admin-surface);
+  border-radius: 12px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  overflow: hidden;
+}
+
+.modal__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 24px;
+  border-bottom: 1px solid var(--admin-border);
+}
+
+.modal__title {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.modal__body {
+  padding: 24px;
+  overflow-y: auto;
+}
+
+/* --- Статистика: карточки --------------------------------------------------- */
+
+.stats-summary {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+@media (max-width: 720px) {
+  .stats-summary { grid-template-columns: 1fr; }
+}
+
+.stats-card {
+  padding: 16px 20px;
+  background: var(--admin-bg);
+  border: 1px solid var(--admin-border);
+  border-radius: 10px;
+}
+
+.stats-card__label {
+  color: var(--admin-muted);
+  font-size: 13px;
+  letter-spacing: 0.2px;
+  margin-bottom: 4px;
+}
+
+.stats-card__value {
+  font-size: 24px;
+  font-weight: 700;
+}
+
+/* --- Heatmap ------------------------------------------------------------ */
+
+.heatmap__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.heatmap__title {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.heatmap__hint {
+  color: var(--admin-muted);
+  font-size: 13px;
+}
+
+.heatmap__wrap {
+  /* 16:9 коробка — SVG растягивается по ширине и держит пропорции 1920×1080.
+     Так кружочки остаются «верно расположены» относительно viewport главной. */
+  position: relative;
+  aspect-ratio: 16 / 9;
+  background: linear-gradient(135deg, #1d1d1f 0%, #33333a 100%);
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.heatmap__svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+/* Цвет кружка — золотой акцент, полупрозрачный; накладываются аддитивно,
+   в «горячих точках» получается ярче. */
+.heatmap__dot {
+  fill: rgba(255, 201, 114, 0.35);
+}
+
+/* --- Заявки: температура лида ------------------------------------------- */
+
+.applications-summary {
+  display: flex;
+  gap: 12px;
+  font-size: 13px;
+  color: var(--admin-muted);
+  flex-wrap: wrap;
+}
+
+.applications-summary__item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.temp-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+}
+
+.temp-badge::before {
+  content: '';
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.temp-badge.hot    { color: #b42318; background: #fee4e2; }
+.temp-badge.hot::before    { background: #d0342c; }
+
+.temp-badge.warm   { color: #8a5a00; background: #fff3d6; }
+.temp-badge.warm::before   { background: #e6a000; }
+
+.temp-badge.cold   { color: #175cd3; background: #e0efff; }
+.temp-badge.cold::before   { background: #2e75e3; }
+
+/* --- Карточка деталей заявки в модалке ---------------------------------- */
+
+.app-details__head {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.app-details__score {
+  color: var(--admin-muted);
+  font-size: 13px;
+}
+
+.app-details__grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px 24px;
+}
+
+@media (max-width: 720px) {
+  .app-details__grid { grid-template-columns: 1fr; }
+}
+
+.app-details__field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 14px;
+}
+
+.app-details__label {
+  color: var(--admin-muted);
+  font-size: 12px;
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+}
+
+.app-details__value {
+  color: var(--admin-text);
+  word-break: break-word;
+}
+
+.app-details__value--empty {
+  color: var(--admin-muted);
+  font-style: italic;
+}
+
+.app-details__reasons {
+  margin-top: 16px;
+  padding: 12px 16px;
+  background: var(--admin-bg);
+  border-left: 3px solid var(--admin-accent);
+  border-radius: 6px;
+  font-size: 14px;
+  color: var(--admin-text);
+}
+
+.app-details__reasons ul {
+  margin: 8px 0 0;
+  padding-left: 20px;
+}
+
+.app-details__routing {
+  margin-top: 16px;
+  padding: 12px 16px;
+  background: #f5ede0;
+  border-radius: 6px;
+  font-size: 14px;
+}

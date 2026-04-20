@@ -16,9 +16,11 @@ services:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_DB: ${POSTGRES_DB}
-    # Пробрасываем на 5433, чтобы не конфликтовать с нативным Postgres на Windows (5432).
-    ports:
-      - "5433:5432"
+    # Порт наружу НЕ пробрасываем (VPh06-шаг 7): БД доступна только через docker-сеть
+    # своим же backend'ом. Для ручных запросов/pgAdmin — `docker exec autello-db psql ...`.
+    # Если нужен внешний pgAdmin — временно раскомментировать:
+    #   ports:
+    #     - "5433:5432"
     volumes:
       - autello-db-data:/var/lib/postgresql/data
     # Backend ждёт здоровой БД (см. depends_on ниже) — без healthcheck может стартовать раньше,
@@ -40,6 +42,7 @@ services:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_DB: ${POSTGRES_DB}
+      SECRET_KEY: ${SECRET_KEY}
     depends_on:
       db:
         condition: service_healthy

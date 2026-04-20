@@ -5,3 +5,7 @@ psycopg2-binary==2.9.10
 pydantic==2.10.3
 pydantic-settings==2.7.0
 python-multipart==0.0.20
+# Авторизация админов: bcrypt-хеш паролей + JWT-токены.
+# bcrypt — односторонний хеш со встроенной солью; pyjwt — подпись и верификация токенов HS256.
+bcrypt==4.2.1
+pyjwt==2.10.1

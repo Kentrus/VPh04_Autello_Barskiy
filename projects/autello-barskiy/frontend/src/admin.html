@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Autéllo Barskiy — Админ-панель</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@300;400;600;700&display=swap" rel="stylesheet">
+</head>
+<body class="admin-body">
+  <!--
+    Три состояния страницы, из которых в конкретный момент видно ровно одно:
+      auth-view    — форма входа (+ регистрация, если админов ещё нет);
+      panel-view   — сама админка (в VPh06-шаге 3 наполним таблицей услуг);
+      loading-view — пока проверяем, валиден ли сохранённый токен.
+    Переключение — через классы is-active, логика в admin.js.
+  -->
+
+  <header class="admin-header">
+    <div class="admin-header__brand">Autéllo Barskiy — Админ-панель</div>
+    <div class="admin-header__user" id="header-user" hidden>
+      <span id="header-username"></span>
+      <button type="button" class="btn btn--ghost" id="logout-btn">Выйти</button>
+    </div>
+  </header>
+
+  <main class="admin-main">
+    <section class="admin-view is-active" id="loading-view">
+      <p class="admin-hint">Загрузка…</p>
+    </section>
+
+    <section class="admin-view" id="auth-view">
+      <div class="auth-card">
+        <h1 class="auth-card__title" id="auth-title">Вход</h1>
+        <p class="auth-card__hint" id="auth-hint">Введите логин и пароль администратора.</p>
+
+        <form id="auth-form" class="auth-form" novalidate>
+          <label class="form__field">
+            <span>Логин</span>
+            <input name="username" type="text" required autocomplete="username" minlength="3">
+          </label>
+          <label class="form__field">
+            <span>Пароль</span>
+            <input name="password" type="password" required autocomplete="current-password" minlength="8">
+          </label>
+
+          <button type="submit" class="btn" id="auth-submit">Войти</button>
+
+          <!--
+            Кнопка-ссылка «Зарегистрироваться» появляется только если
+            /api/auth/check сообщил, что админов нет вообще.
+            Как только первый админ создан — кнопка пропадает навсегда.
+          -->
+          <button type="button" class="btn btn--link" id="toggle-register" hidden>
+            Зарегистрироваться
+          </button>
+        </form>
+
+        <div id="auth-status" class="form__status" role="status" aria-live="polite"></div>
+      </div>
+    </section>
+
+    <section class="admin-view" id="panel-view">
+      <div class="admin-panel">
+        <h1 class="admin-panel__title">Добро пожаловать, <span id="panel-username"></span></h1>
+
+        <!-- ========== Действия верхнего уровня ========== -->
+        <div class="admin-actions">
+          <button type="button" class="btn" id="stats-open-btn">📊 Статистика пользователей</button>
+        </div>
+
+        <!-- ========== Заявки пользователей ========== -->
+        <article class="admin-block">
+          <header class="admin-block__header">
+            <h2 class="admin-block__title">Заявки</h2>
+            <div class="applications-summary" id="applications-summary"></div>
+          </header>
+
+          <div id="applications-status" class="form__status" role="status" aria-live="polite"></div>
+
+          <div class="admin-table-wrap">
+            <table class="admin-table">
+              <thead>
+                <tr>
+                  <th style="width: 110px;">Температура</th>
+                  <th>Клиент</th>
+                  <th>Услуга</th>
+                  <th style="width: 140px;">Бюджет</th>
+                  <th style="width: 140px;">Срок</th>
+                  <th style="width: 100px;">Действия</th>
+                </tr>
+              </thead>
+              <tbody id="applications-tbody"></tbody>
+            </table>
+          </div>
+        </article>
+
+        <!-- ========== Каталог услуг ========== -->
+        <article class="admin-block">
+          <header class="admin-block__header">
+            <h2 class="admin-block__title">Услуги</h2>
+            <button type="button" class="btn" id="services-add-btn">+ Добавить услугу</button>
+          </header>
+
+          <!-- Статус-плашка (загрузка, ошибки, успехи) -->
+          <div id="services-status" class="form__status" role="status" aria-live="polite"></div>
+
+          <!-- Таблица; tbody наполняется из JS. thead живёт в HTML — не меняется. -->
+          <div class="admin-table-wrap">
+            <table class="admin-table">
+              <thead>
+                <tr>
+                  <th style="width: 60px;">ID</th>
+                  <th>Услуга</th>
+                  <th style="width: 220px;">Бюджет</th>
+                  <th style="width: 200px;">Действия</th>
+                </tr>
+              </thead>
+              <tbody id="services-tbody">
+                <!-- строки вставляются рендером; пустая таблица — showEmptyState() -->
+              </tbody>
+            </table>
+          </div>
+        </article>
+      </div>
+    </section>
+  </main>
+
+  <!-- ========== Модалка деталей заявки ========== -->
+  <div class="modal" id="app-modal" hidden aria-hidden="true" role="dialog" aria-labelledby="app-modal-title">
+    <div class="modal__backdrop" data-close-modal></div>
+    <div class="modal__dialog" role="document">
+      <header class="modal__header">
+        <h2 class="modal__title" id="app-modal-title">Заявка</h2>
+        <button type="button" class="btn btn--ghost btn--small" data-close-modal>Закрыть</button>
+      </header>
+      <div class="modal__body" id="app-modal-body">
+        <!-- содержимое подставляется из JS -->
+      </div>
+    </div>
+  </div>
+
+  <!-- ========== Модалка статистики пользователей ========== -->
+  <!-- hidden управляется через атрибут — его проще, чем display:none в JS. -->
+  <div class="modal" id="stats-modal" hidden aria-hidden="true" role="dialog" aria-labelledby="stats-title">
+    <!-- backdrop — клик по нему закрывает окно, сам контент ловит клик и не пропускает наверх -->
+    <div class="modal__backdrop" data-close-modal></div>
+
+    <div class="modal__dialog" role="document">
+      <header class="modal__header">
+        <h2 class="modal__title" id="stats-title">Статистика пользователей</h2>
+        <button type="button" class="btn btn--ghost btn--small" data-close-modal>Закрыть</button>
+      </header>
+
+      <div class="modal__body">
+        <div id="stats-status" class="form__status" role="status" aria-live="polite"></div>
+
+        <!-- Средние значения за периоды: день/неделя/месяц -->
+        <section class="stats-summary">
+          <div class="stats-card">
+            <div class="stats-card__label">Среднее время — день</div>
+            <div class="stats-card__value" id="stat-day">—</div>
+          </div>
+          <div class="stats-card">
+            <div class="stats-card__label">Среднее время — неделя</div>
+            <div class="stats-card__value" id="stat-week">—</div>
+          </div>
+          <div class="stats-card">
+            <div class="stats-card__label">Среднее время — месяц</div>
+            <div class="stats-card__value" id="stat-month">—</div>
+          </div>
+        </section>
+
+        <!-- Heatmap: SVG с кружками разной прозрачности поверх схемы viewport -->
+        <section class="heatmap">
+          <div class="heatmap__header">
+            <h3 class="heatmap__title">Heatmap курсора</h3>
+            <span class="heatmap__hint" id="heatmap-hint">Всего точек: 0</span>
+          </div>
+          <div class="heatmap__wrap">
+            <svg id="heatmap-svg" class="heatmap__svg" viewBox="0 0 1920 1080" preserveAspectRatio="xMidYMid meet"></svg>
+          </div>
+        </section>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

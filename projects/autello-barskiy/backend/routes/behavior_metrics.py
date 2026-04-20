@@ -1,9 +1,11 @@
-"""HTTP-эндпоинты для поведенческой аналитики.
+"""HTTP-эндпоинты для поведенческой аналитики (анонимные метрики).
 
-POST шлёт фронт (отдельным запросом после отправки заявки).
-GET-ы — для админки/отчётов (пока не реализовано).
+POST /behavior-metrics — шлёт фронт главной страницы раз в секунду.
+GET /behavior-metrics — список последних метрик (для агрегации в админке).
+
+Привязки к заявке (application_id) нет — см. models/behavior_metric.py.
 """
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
 from core.database import get_db
@@ -11,7 +13,6 @@ from models.behavior_metric import (
     BehaviorMetricCreate,
     BehaviorMetricOut,
     create_behavior_metric,
-    get_behavior_metric_by_application,
     get_behavior_metrics,
 )
 
@@ -20,20 +21,16 @@ router = APIRouter(prefix="/behavior-metrics", tags=["behavior-metrics"])
 
 @router.post("", response_model=BehaviorMetricOut, status_code=201)
 def create(data: BehaviorMetricCreate, db: Session = Depends(get_db)):
-    """Сохранить метрику для заявки. Одна заявка = одна метрика (unique FK)."""
+    """Сохранить метрику. application_id из input игнорируется."""
     return create_behavior_metric(db, data)
 
 
 @router.get("", response_model=list[BehaviorMetricOut])
-def list_all(db: Session = Depends(get_db)):
-    """Все метрики, свежие сверху."""
-    return get_behavior_metrics(db)
-
-
-@router.get("/by-application/{application_id}", response_model=BehaviorMetricOut)
-def by_application(application_id: int, db: Session = Depends(get_db)):
-    """Метрика по id заявки — главный сценарий для страницы деталей в админке."""
-    item = get_behavior_metric_by_application(db, application_id)
-    if item is None:
-        raise HTTPException(status_code=404, detail="Metric not found for this application")
-    return item
+def list_all(
+    skip: int = 0,
+    limit: int = 1000,
+    db: Session = Depends(get_db),
+):
+    """Последние метрики, свежие сверху. skip/limit для пагинации в админке."""
+    items = get_behavior_metrics(db, limit=skip + limit)
+    return items[skip:skip + limit]

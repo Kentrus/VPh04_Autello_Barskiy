@@ -42,6 +42,18 @@ class AdminSettingCreate(BaseModel):
     budget_range: str
 
 
+class AdminSettingUpdate(BaseModel):
+    """Входные данные для PUT /admin-settings/{id}.
+
+    Отдельная схема от Create — оба поля обязательны, но семантически
+    это «заменить», а не «создать». Не делаем поля Optional: для частичного
+    обновления пришлось бы использовать PATCH, а admin-панель редактирует
+    строку целиком и так проще и предсказуемее.
+    """
+    services: str
+    budget_range: str
+
+
 class AdminSettingOut(AdminSettingCreate):
     """Ответ API с id и метаданными."""
     model_config = ConfigDict(from_attributes=True)
@@ -68,6 +80,20 @@ def get_admin_settings(db: Session) -> list[AdminSetting]:
 def get_admin_setting(db: Session, item_id: int) -> AdminSetting | None:
     """Одна услуга по id или None."""
     return db.query(AdminSetting).filter(AdminSetting.id == item_id).first()
+
+
+def update_admin_setting(
+    db: Session, item_id: int, data: AdminSettingUpdate
+) -> AdminSetting | None:
+    """Изменить услугу. None — если не найдена."""
+    item = get_admin_setting(db, item_id)
+    if item is None:
+        return None
+    for key, value in data.model_dump().items():
+        setattr(item, key, value)
+    db.commit()
+    db.refresh(item)
+    return item
 
 
 def delete_admin_setting(db: Session, item_id: int) -> bool:
