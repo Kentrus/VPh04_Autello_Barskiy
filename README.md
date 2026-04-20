@@ -123,8 +123,38 @@ docker compose -f docker-compose.prod.yml up -d
 #### Проверки
 
 - `http://<ip>/` → "Infra platform is running"
-- `http://<ip>:5050` → pgAdmin (логин/пароль из `.env`)
-- `http://<ip>:5000/v2/_catalog` → `{"repositories":[]}` (требует авторизации)
+- `https://registry.otiva.ru/v2/_catalog` → каталог Registry (требует авторизации, см. ниже)
+- pgAdmin наружу закрыт (VPh06). Доступ через SSH-тоннель:
+  `ssh -L 5050:infra-pgadmin:80 root@otiva.ru`, потом открыть `http://localhost:5050`
+
+#### Работа с приватным Registry
+
+Образы проектов живут в `registry.otiva.ru` (HTTPS за infra-nginx, htpasswd-авторизация). Чтобы пушить/пуллить с нового компьютера:
+
+```bash
+# 1. Залогиниться (логин/пароль — те, что задали в ./registry/create-user.sh)
+docker login registry.otiva.ru
+#   Username: admin
+#   Password: ******
+
+# 2. Проверить, что каталог отвечает (curl -u логин:пароль)
+curl -u admin:<password> https://registry.otiva.ru/v2/_catalog
+# → {"repositories":["autello-backend","autello-web"]}
+
+# 3. Теперь можно пушить образы, tag'нутые под registry.otiva.ru/*:
+docker compose build         # собирает с tag registry.otiva.ru/autello-backend:latest
+docker push registry.otiva.ru/autello-backend:latest
+docker push registry.otiva.ru/autello-web:latest
+# Watchtower на сервере подхватит за ~60 секунд.
+```
+
+Чтобы **Watchtower** на сервере мог дёргать Registry за образами, на сервере тоже нужно залогиниться один раз:
+
+```bash
+ssh root@otiva.ru
+docker login registry.otiva.ru
+# → сохранится в /root/.docker/config.json, этот файл монтируется в контейнер watchtower.
+```
 
 ### Безопасность
 
